@@ -36,8 +36,8 @@ def count_messages(hangouts, conversation_index, users):
   return count
 
 # Translate the fallback_name to gaia_id
-def _fallback_to_gaia(fallback_name):
-  return  ""
+def _fallback_to_gaia(fallback_name, fallback_names):
+  return  fallback_names[fallback_name]["gaia_id"]
 
 def get_messages_for_user(hangouts, conversation_index, user):
   messages = []
@@ -59,18 +59,22 @@ def main():
   dumpfile = options.dumpfile
   conversation_index = options.conversation_index
   conversation_name = options.conversation_name
+  user = options.user
 
   conversation_index = 9
 
   if dumpfile is None:
     print("Error, no dumpfile specified with -f/--file")
     parser.print_help()
-    sys.exit(2)
+    return
 
   hangouts = load_hangouts(dumpfile)
   gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
+
+  print _fallback_to_gaia(user, fallback_names)
+  sys.exit(0)
+
   count = count_messages(hangouts, conversation_index, gaia_ids)
-  print count
   for gaia_id, num in count.iteritems():
     print "{0}: {1}".format(gaia_ids[gaia_id]["name"], num)
 
