@@ -1,31 +1,33 @@
 #!/usr/bin/python
 
+import sys
+
 import json
-from pprint import pprint
+from optparse import OptionParser
 
-convo_id = 15
-
-def load_hangouts():
-  with open('Hangouts/Hangouts.json') as data_file:
+def load_hangouts(dumpfile):
+  with open(dumpfile) as data_file:
       return json.load(data_file)
 
-def create_user_dict(hangouts):
-  users = {}
-  participant_data = hangouts["conversation_state"][convo_id]["conversation_state"]["conversation"]["participant_data"]
+def create_user_dict(hangouts, conversation_index):
+  gaia_ids = {}
+  fallback_names = {}
+  participant_data = hangouts["conversation_state"][conversation_index]["conversation_state"]["conversation"]["participant_data"]
   for participant in participant_data:
     gaia_id = participant["id"]["gaia_id"]
     name = participant["fallback_name"]
-    users[gaia_id] = {"name":name}
-  return users
+    gaia_ids[gaia_id] = {"name":name}
+    fallback_names[name] = {"gaia_id":gaia_id}
+  return (gaia_ids,fallback_names)
 
-def junk(users):
+def count_messages(hangouts, conversation_index, users):
   count = {}
-  events = hangouts["conversation_state"][convo_id]["conversation_state"]["event"]
+  events = hangouts["conversation_state"][conversation_index]["conversation_state"]["event"]
   #pprint(events)
   for event in events:
     gaia_id = event["sender_id"]["gaia_id"]
     if gaia_id not in count:
-      count[gaia_id] = 0
+      count[gaia_id] = 1
     else:
       count[gaia_id] += 1
 #    print users[gaia_id]["name"]
@@ -33,8 +35,44 @@ def junk(users):
 #    print ""
   return count
 
-hangouts = load_hangouts()
-users = create_user_dict(hangouts)
-count = junk(users)
-for gaia_id, num in count.iteritems():
-  print "{0}: {1}".format(users[gaia_id]["name"], num)
+# Translate the fallback_name to gaia_id
+def _fallback_to_gaia(fallback_name):
+  return  ""
+
+def get_messages_for_user(hangouts, conversation_index, user):
+  messages = []
+  events = hangouts["conversation_state"][conversation_index]["conversation_state"]["event"]
+  for event in events:
+    if event["sender_id"]["gaia_id"] == user:
+      messages.append(event)
+
+def main():
+  usage = "TODO"
+
+  parser = OptionParser(usage=usage)
+  parser.add_option("-f", "--dumpfile", help="Hangouts JSON file")
+  parser.add_option("-C", "--conversation_name", help="Conversation")
+  parser.add_option("-c", "--conversation_index", help="Conversation index")
+  parser.add_option("-u", "--user", help="Only one user")
+
+  (options, args) = parser.parse_args()
+  dumpfile = options.dumpfile
+  conversation_index = options.conversation_index
+  conversation_name = options.conversation_name
+
+  conversation_index = 9
+
+  if dumpfile is None:
+    print("Error, no dumpfile specified with -f/--file")
+    parser.print_help()
+    sys.exit(2)
+
+  hangouts = load_hangouts(dumpfile)
+  gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
+  count = count_messages(hangouts, conversation_index, gaia_ids)
+  print count
+  for gaia_id, num in count.iteritems():
+    print "{0}: {1}".format(gaia_ids[gaia_id]["name"], num)
+
+if __name__ == "__main__":
+  main()
