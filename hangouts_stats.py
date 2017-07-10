@@ -3,6 +3,7 @@
 import sys
 
 import json
+import pprint
 from optparse import OptionParser
 
 def load_hangouts(dumpfile):
@@ -15,7 +16,7 @@ def create_user_dict(hangouts, conversation_index):
   participant_data = hangouts["conversation_state"][conversation_index]["conversation_state"]["conversation"]["participant_data"]
   for participant in participant_data:
     gaia_id = participant["id"]["gaia_id"]
-    name = participant["fallback_name"]
+    name = participant.get("fallback_name",participant["id"]["gaia_id"])
     gaia_ids[gaia_id] = {"name":name}
     fallback_names[name] = {"gaia_id":gaia_id}
   return (gaia_ids,fallback_names)
@@ -61,7 +62,7 @@ def main():
   conversation_name = options.conversation_name
   user = options.user
 
-  conversation_index = 9
+  conversation_index = 17
 
   if dumpfile is None:
     print("Error, no dumpfile specified with -f/--file")
@@ -70,9 +71,10 @@ def main():
 
   hangouts = load_hangouts(dumpfile)
   gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
+  print(json.dumps(gaia_ids, indent=2))
 
-  print _fallback_to_gaia(user, fallback_names)
-  sys.exit(0)
+  #print _fallback_to_gaia(user, fallback_names)
+  #sys.exit(0)
 
   count = count_messages(hangouts, conversation_index, gaia_ids)
   for gaia_id, num in count.iteritems():
