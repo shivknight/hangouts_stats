@@ -21,9 +21,15 @@ def create_user_dict(hangouts, conversation_index):
     fallback_names[name] = {"gaia_id":gaia_id}
   return (gaia_ids,fallback_names)
 
+def filter_by_timestamp(events,start_time=sys.minint,end_time=sys.maxint):
+  return filter(lambda e: int(e["timestamp"]) > start_time, events)
+
 def count_messages(hangouts, conversation_index, users):
   count = {}
   events = hangouts["conversation_state"][conversation_index]["conversation_state"]["event"]
+  print len(events)
+  events = filter_by_timestamp(events,1503906519000000)
+  print len(events)
   #pprint(events)
   for event in events:
     gaia_id = event["sender_id"]["gaia_id"]
@@ -62,7 +68,7 @@ def main():
   conversation_name = options.conversation_name
   user = options.user
 
-  conversation_index = 17
+  conversation_index = 18
 
   if dumpfile is None:
     print("Error, no dumpfile specified with -f/--file")
@@ -71,13 +77,17 @@ def main():
 
   hangouts = load_hangouts(dumpfile)
   gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
-  print(json.dumps(gaia_ids, indent=2))
+#  print(json.dumps(gaia_ids, indent=2))
+#  print(json.dumps(fallback_names, indent=2))
 
   #print _fallback_to_gaia(user, fallback_names)
   #sys.exit(0)
 
+
   count = count_messages(hangouts, conversation_index, gaia_ids)
+  print(json.dumps(count, indent=2))
   for gaia_id, num in count.iteritems():
+    print gaia_id, num
     print "{0}: {1}".format(gaia_ids[gaia_id]["name"], num)
 
 if __name__ == "__main__":
