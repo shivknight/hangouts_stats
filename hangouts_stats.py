@@ -1,27 +1,54 @@
 #!/usr/bin/python
 import sys
+from collections import defaultdict
+from enum import Enum
 
 import json
-import pprint
+from pprint import pprint
 import argparse
+
+class ParticipantType(Enum):
+  GAIA = 1
+  OFF_NETWORK_PHONE = 2
 
 class User:
 
+  raw_json = {}
+  participant_type = ParticipantType.GAIA
   gaia_id = None
-  def __init__(self, gaia_id):
-    self.gaia_id =  gaia_id
-    return
+  firstname = None
+  lastname = None
+  fullname = None
+  e164 = None
+
+  def __init__(self, user_json):
+    self.raw_json = user_json
+    self.gaia_id =  self.raw_json["id"]["gaia_id"]
+    self.fullname = self.raw_json.get("fallback_name", "NO NAME")
+    self.firstname = self.fullname.split(" ")[0]
+    self.lastname = self.fullname.split(" ")[1]
+
+  def __str__(self):
+    return self.fullname
 
 class Conversation:
+  raw_json = {}
   conversation_id = None
   users = set()
 
   def __init__(self, conversation_json):
+    self.raw_json = conversation_json
     self.conversation_id = conversation_json["conversation_state"]["conversation_id"]["id"]
-    return
+    self.buildUsers()
+    for u in self.users:
+      print(u)
 
-  def __str__():
-    return conversation_id
+  def buildUsers(self):
+    for user in self.raw_json["conversation_state"]["conversation"]["participant_data"]:
+      self.users.add(User(user))
+
+  def __str__(self):
+    return self.conversation_id
 
 class Hangouts:
   hangouts_json = {}
@@ -34,17 +61,14 @@ class Hangouts:
     with open(filepath) as data_file:
       self.hangouts_json = json.load(data_file)
 
-    self.conversations = buildConversations()
+    self.buildConversations(self.hangouts_json)
 
-    return
-
-  def buildConversations(hangouts):
-    _convos = set()
+  def buildConversations(self, hangouts):
 
     for c in hangouts["conversation_state"]:
-      _convos.add(Conversation(c))
+      self.conversations.add(Conversation(c))
 
-    return _convos
+    return
 
   def create_user_dict(hangouts, conversation_index):
     gaia_ids = {}
@@ -138,11 +162,12 @@ def main():
 
   conversation_index = 18
 
-  print(dumpfile)
   hangouts = Hangouts(filepath=dumpfile)
+#  for c in hangouts.conversations:
+#    print(c)
   #hangouts = Hangouts(filepath=dumpfile, conversation_name=conversation_name, conversation_index=conversation_index, user=user)
 
-  gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
+#  gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
 #  print(json.dumps(gaia_ids, indent=2))
 #  print(json.dumps(fallback_names, indent=2))
 
