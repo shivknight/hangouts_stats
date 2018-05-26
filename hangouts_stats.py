@@ -1,4 +1,8 @@
 #!/usr/bin/python
+'''
+TODO:
+  filter out voicemails transcriptions
+'''
 import sys
 from collections import defaultdict
 from enum import Enum
@@ -11,48 +15,63 @@ class ParticipantType(Enum):
   GAIA = 1
   OFF_NETWORK_PHONE = 2
 
+class MessageType(Enum):
+  LINE_BREAK = 1
+  LINK = 2
+  TEXT = 2
+
 class User:
 
-  raw_json = {}
-  participant_type = ParticipantType.GAIA
+  participant_type = None
   gaia_id = None
+  identifier = None
   firstname = None
   lastname = None
   fullname = None
   e164 = None
 
   def __init__(self, user_json):
-    self.raw_json = user_json
-    self.gaia_id =  self.raw_json["id"]["gaia_id"]
-    self.fullname = self.raw_json.get("fallback_name", "NO NAME")
+    self.gaia_id =  user_json["id"]["gaia_id"]
+    self.fullname = user_json.get("fallback_name", "NO NAME")
     self.firstname = self.fullname.split(" ")[0]
-    self.lastname = self.fullname.split(" ")[1]
+#    self.lastname = self.fullname.split(" ")[1]
+    self.participant_type = user_json["participant_type"]
 
   def __str__(self):
     return self.fullname
 
+  def __eq__(self, other):
+    return isinstance(other, User) and self.gaia_id == other.gaia_id
+
+  def __hash__(self):
+    return hash(self.gaia_id)
+
+class Message:
+  msg_type = None
+  segments = []
+
 class Conversation:
   raw_json = {}
   conversation_id = None
-  users = set()
+  _users = set()
 
-  def __init__(self, conversation_json):
+  def __init__(self, conversation_json, users):
     self.raw_json = conversation_json
-    self.conversation_id = conversation_json["conversation_state"]["conversation_id"]["id"]
-    self.buildUsers()
-    for u in self.users:
-      print(u)
+    self.conversation_id = conversation_json["conversation"]["conversation_id"]["id"]
+    self.addUsers(users)
 
-  def buildUsers(self):
-    for user in self.raw_json["conversation_state"]["conversation"]["participant_data"]:
-      self.users.add(User(user))
+  def addUsers(self, users):
+    for user in self.raw_json["conversation"]["conversation"]["participant_data"]:
+#      print(user["id"]["gaia_id"])
+      print(len(users))
+      users.add(User(user))
 
   def __str__(self):
     return self.conversation_id
 
 class Hangouts:
   hangouts_json = {}
-  user_dict = {}
+  users = set()
   conversations = set()
 
   def __init__(self, filepath):
@@ -61,12 +80,14 @@ class Hangouts:
     with open(filepath) as data_file:
       self.hangouts_json = json.load(data_file)
 
-    self.buildConversations(self.hangouts_json)
+    self.buildConversations(self.hangouts_json, self.users)
+#    for u in self.users:
+#      print(u.gaia_id, u.fullname)
 
-  def buildConversations(self, hangouts):
+  def buildConversations(self, hangouts, users):
 
-    for c in hangouts["conversation_state"]:
-      self.conversations.add(Conversation(c))
+    for c in hangouts["conversations"]:
+      self.conversations.add(Conversation(c, users))
 
     return
 
