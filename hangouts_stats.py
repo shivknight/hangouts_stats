@@ -2,6 +2,7 @@
 '''
 TODO:
   filter out voicemails transcriptions
+  fix enums
 '''
 import sys
 from collections import defaultdict
@@ -12,13 +13,17 @@ from pprint import pprint
 import argparse
 
 class ParticipantType(Enum):
-  GAIA = 1
-  OFF_NETWORK_PHONE = 2
+  GAIA = "gaia"
+  OFF_NETWORK_PHONE = "off_network"
 
 class MessageType(Enum):
-  LINE_BREAK = 1
-  LINK = 2
-  TEXT = 2
+  LINE_BREAK = "line_break"
+  LINK = "link"
+  TEXT = "text"
+
+class ConversationType(Enum):
+  GROUP = "group"
+  STICKY_ONE_TO_ONE = "one_to_one"
 
 class User:
 
@@ -35,16 +40,16 @@ class User:
     self.fullname = user_json.get("fallback_name", "NO NAME")
     self.firstname = self.fullname.split(" ")[0]
 #    self.lastname = self.fullname.split(" ")[1]
-    self.participant_type = user_json["participant_type"]
+#    self.participant_type = ParticipantType(user_json["participant_type"])
 
   def __str__(self):
     return self.fullname
 
-  def __eq__(self, other):
-    return isinstance(other, User) and self.gaia_id == other.gaia_id
+#  def __eq__(self, other):
+#    return isinstance(other, User) and self.gaia_id == other.gaia_id
 
-  def __hash__(self):
-    return hash(self.gaia_id)
+#  def __hash__(self):
+#    return hash(self.gaia_id)
 
 class Message:
   msg_type = None
@@ -53,17 +58,19 @@ class Message:
 class Conversation:
   raw_json = {}
   conversation_id = None
+  conversation_type = None
   _users = set()
 
   def __init__(self, conversation_json, users):
     self.raw_json = conversation_json
     self.conversation_id = conversation_json["conversation"]["conversation_id"]["id"]
+#    self.conversation_type = ConversationType(conversation_json["conversation"]["conversation"]["type"])
     self.addUsers(users)
 
   def addUsers(self, users):
     for user in self.raw_json["conversation"]["conversation"]["participant_data"]:
 #      print(user["id"]["gaia_id"])
-      print(len(users))
+#      print(len(users))
       users.add(User(user))
 
   def __str__(self):
@@ -72,6 +79,7 @@ class Conversation:
 class Hangouts:
   hangouts_json = {}
   users = set()
+  users2 = {}
   conversations = set()
 
   def __init__(self, filepath):
@@ -81,8 +89,14 @@ class Hangouts:
       self.hangouts_json = json.load(data_file)
 
     self.buildConversations(self.hangouts_json, self.users)
-#    for u in self.users:
-#      print(u.gaia_id, u.fullname)
+    for u in self.users:
+      print(u.gaia_id, u.fullname)
+
+  def buildUsers():
+    for c in hangouts_json["conversations"]:
+      for p in c["conversation"]["participant_data"]:
+        gaia_id = p["id"]["gaia_id"]
+        users2[gaia_id] = User(user)
 
   def buildConversations(self, hangouts, users):
 
@@ -90,17 +104,6 @@ class Hangouts:
       self.conversations.add(Conversation(c, users))
 
     return
-
-  def create_user_dict(hangouts, conversation_index):
-    gaia_ids = {}
-    fallback_names = {}
-    participant_data = hangouts["conversation_state"][conversation_index]["conversation_state"]["conversation"]["participant_data"]
-    for participant in participant_data:
-      gaia_id = participant["id"]["gaia_id"]
-      name = participant.get("fallback_name",participant["id"]["gaia_id"])
-      gaia_ids[gaia_id] = {"name":name}
-      fallback_names[name] = {"gaia_id":gaia_id}
-    return (gaia_ids,fallback_names)
 
 class Message:
   def __init__():
@@ -121,18 +124,6 @@ class LinebreakContent:
 class TextMessage:
   def __init__():
     return
-
-
-def create_user_dict(hangouts, conversation_index):
-  gaia_ids = {}
-  fallback_names = {}
-  participant_data = hangouts["conversation_state"][conversation_index]["conversation_state"]["conversation"]["participant_data"]
-  for participant in participant_data:
-    gaia_id = participant["id"]["gaia_id"]
-    name = participant.get("fallback_name",participant["id"]["gaia_id"])
-    gaia_ids[gaia_id] = {"name":name}
-    fallback_names[name] = {"gaia_id":gaia_id}
-  return (gaia_ids,fallback_names)
 
 def filter_by_timestamp(events,start_time=0,end_time=sys.maxsize):
   return filter(lambda e: int(e["timestamp"]) > start_time, events)
@@ -184,24 +175,6 @@ def main():
   conversation_index = 18
 
   hangouts = Hangouts(filepath=dumpfile)
-#  for c in hangouts.conversations:
-#    print(c)
-  #hangouts = Hangouts(filepath=dumpfile, conversation_name=conversation_name, conversation_index=conversation_index, user=user)
-
-#  gaia_ids, fallback_names = create_user_dict(hangouts, conversation_index)
-#  print(json.dumps(gaia_ids, indent=2))
-#  print(json.dumps(fallback_names, indent=2))
-
-  #print _fallback_to_gaia(user, fallback_names)
-  #sys.exit(0)
-
-  '''
-  count = count_messages(hangouts, conversation_index, gaia_ids)
-  print(json.dumps(count, indent=2))
-  for gaia_id, num in count.iteritems():
-    print(gaia_id, num)
-    print("{0}: {1}".format(gaia_ids[gaia_id]["name"], num))
-  '''
 
 if __name__ == "__main__":
   main()
